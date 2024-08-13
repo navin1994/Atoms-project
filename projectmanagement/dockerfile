@@ -1,0 +1,136 @@
+# # Stage 1: Build the application
+# FROM eclipse-temurin:17-jdk as build
+
+# # Set the current working directory inside the image 
+# WORKDIR /usr/src/bootapp 
+
+# # Copy  maven executable to the image 
+# COPY mvnw .
+# COPY .mvn .mvn
+
+# # Copy the pom.xml file
+# COPY pom.xml .
+
+# #Build all the dependencies in preparation to go offline 
+# # This is a seperate step so the dependencies will be cached unless
+# # the pom.xml file has changed
+# RUN ./mvnw dependency:go-offline -B
+
+# #Copy the project source
+# COPY src src
+
+# # Package the application
+# RUN ./mvnw package -DskipTests
+
+# # Create a directory for dependencies and extract the JAR
+# RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
+
+# #Stage 2
+# FROM eclipse-temurin:17-jdk
+
+# # Define the path for dependencies
+# ARG DEPENDENCY=/app/target/dependency
+
+# # Copy dependencies and application classes from the build stage
+# COPY --from=build ${DEPENDENCY}/BOOT-INF/lib /app/lib
+# COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
+# COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
+
+# # Set the entry point for the container
+# ENTRYPOINT [ "java","-cp","app:app/lib/*","com.pms.ProjectmanagementApplication" ]
+
+# # Stage 1: Build the application
+# FROM eclipse-temurin:17-jdk as build
+
+# # Set the working directory inside the image 
+# WORKDIR /usr/src/bootapp 
+
+# # Copy Maven wrapper and configuration
+# COPY mvnw .
+# COPY .mvn .mvn
+
+# # Copy the pom.xml file
+# COPY pom.xml .
+
+# # Build dependencies
+# RUN ./mvnw dependency:go-offline -B
+
+# # Copy the project source
+# COPY src src
+
+# # Package the application
+# RUN ./mvnw package -DskipTests
+
+# # Create a directory for dependencies and extract the JAR
+# RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
+
+# # Stage 2: Run the application
+# FROM eclipse-temurin:17-jdk
+
+# # Define the path for dependencies
+# ARG DEPENDENCY=/usr/src/bootapp/target/dependency
+
+# # Create necessary directories
+# RUN mkdir -p /app/lib /app/META-INF /app
+
+# # Copy dependencies and application classes from the build stage
+# COPY --from=build ${DEPENDENCY}/BOOT-INF/lib /app/lib
+# COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
+# COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
+
+# # Set the working directory
+# WORKDIR /app
+
+# # Expose the port your application will run on
+# EXPOSE 5054
+
+# # Set the entry point for the container
+# ENTRYPOINT ["java", "-cp", "app:app/lib/*", "com.pms.ProjectmanagementApplication"]
+
+# Stage 1: Build the application
+FROM eclipse-temurin:17-jdk as build
+
+# Set the working directory inside the image 
+WORKDIR /app 
+
+# Copy Maven wrapper and configuration
+COPY mvnw .
+COPY .mvn .mvn
+
+# Copy the pom.xml file
+COPY pom.xml .
+
+# Build dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy the project source
+COPY src src
+
+# Package the application
+RUN ./mvnw package -DskipTests
+
+# Create a directory for dependencies and extract the JAR
+RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
+
+# Stage 2: Run the application
+FROM eclipse-temurin:17-jdk
+
+# Define the path for dependencies
+ARG DEPENDENCY=/app/target/dependency
+
+# Create necessary directories
+# RUN mkdir -p /app/lib /app/META-INF /app
+
+# Copy dependencies and application classes from the build stage
+COPY --from=build ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
+COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
+
+# Set the working directory
+# WORKDIR /app
+
+# Expose the port your application will run on
+EXPOSE 5054
+
+# Set the entry point for the container
+ENTRYPOINT ["java", "-cp", "app:app/lib/*", "com.pms.ProjectmanagementApplication"]
